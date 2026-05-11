@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <author>
+    <name>Drama-meet</name>
+  </author>
+  <generator uri="https://hexo.io/">Hexo</generator>
+  <id>https://drama-meet.github.io/</id>
+  <link href="https://drama-meet.github.io/" rel="alternate"/>
+  <link href="https://drama-meet.github.io/atom.xml" rel="self"/>
+  <rights>All rights reserved 2026, Drama-meet</rights>
+  <subtitle>Drama-meet 的个人博客</subtitle>
+  <title>闲来无事睡大觉</title>
+  <updated>2026-05-11T13:13:27.586Z</updated>
+  <entry>
+    <author>
+      <name>Drama-meet</name>
+    </author>
+    <category term="博客" scheme="https://drama-meet.github.io/categories/%E5%8D%9A%E5%AE%A2/"/>
+    <category term="Hexo" scheme="https://drama-meet.github.io/tags/Hexo/"/>
+    <category term="Shoka" scheme="https://drama-meet.github.io/tags/Shoka/"/>
+    <id>https://drama-meet.github.io/2026/05/09/hello-world/</id>
+    <link href="https://drama-meet.github.io/2026/05/09/hello-world/"/>
+    <published>2026-05-09T13:16:50.000Z</published>
+    <summary>
+      <![CDATA[<p>Welcome to <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlvLw==">Hexo</span>! This is your very first post. Check <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlvL2RvY3Mv">documentation</span]]>
+    </summary>
+    <title>Hello World</title>
+    <updated>2026-05-11T13:13:27.586Z</updated>
+  </entry>
+</feed>

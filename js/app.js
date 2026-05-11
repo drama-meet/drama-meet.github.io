@@ -1,4 +1,4 @@
-var CONFIG = {"version":"0.2.5","hostname":"http://example.com","root":"/","statics":"/","favicon":{"normal":"images/favicon.ico","hidden":"images/failure.ico"},"darkmode":false,"auto_scroll":true,"js":{"valine":"gh/amehime/MiniValine@4.2.2-beta10/dist/MiniValine.min.js","chart":"npm/frappe-charts@1.5.0/dist/frappe-charts.min.iife.min.js","copy_tex":"npm/katex@0.12.0/dist/contrib/copy-tex.min.js","fancybox":"combine/npm/jquery@3.5.1/dist/jquery.min.js,npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js,npm/justifiedGallery@3.8.1/dist/js/jquery.justifiedGallery.min.js"},"css":{"valine":"css/comment.css","katex":"npm/katex@0.12.0/dist/katex.min.css","mermaid":"css/mermaid.css","fancybox":"combine/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css,npm/justifiedGallery@3.8.1/dist/css/justifiedGallery.min.css"},"loader":{"start":true,"switch":true},"search":null,"valine":{"appId":null,"appKey":null,"placeholder":"ヽ(○´∀`)ﾉ♪","avatar":"mp","pageSize":10,"lang":"en","visitor":true,"NoRecordIP":false,"serverURLs":null,"powerMode":true,"tagMeta":{"visitor":"新朋友","master":"主人","friend":"小伙伴","investor":"金主粑粑"},"tagColor":{"master":"var(--color-orange)","friend":"var(--color-aqua)","investor":"var(--color-pink)"},"tagMember":{"master":null,"friend":null,"investor":null}},"quicklink":{"timeout":3000,"priority":true},"fireworks":["rgba(255,182,185,.9)","rgba(250,227,217,.9)","rgba(187,222,214,.9)","rgba(138,198,209,.9)"]};const getRndInteger = function (min, max) {
+var CONFIG = {"version":"0.2.5","hostname":"https://drama-meet.github.io","root":"/","statics":"/","favicon":{"normal":"images/favicon.ico","hidden":"images/failure.ico"},"darkmode":false,"auto_scroll":true,"js":{"valine":"gh/amehime/MiniValine@4.2.2-beta10/dist/MiniValine.min.js","chart":"npm/frappe-charts@1.5.0/dist/frappe-charts.min.iife.min.js","copy_tex":"npm/katex@0.12.0/dist/contrib/copy-tex.min.js","fancybox":"combine/npm/jquery@3.5.1/dist/jquery.min.js,npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js,npm/justifiedGallery@3.8.1/dist/js/jquery.justifiedGallery.min.js"},"css":{"valine":"css/comment.css","katex":"npm/katex@0.12.0/dist/katex.min.css","mermaid":"css/mermaid.css","fancybox":"combine/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css,npm/justifiedGallery@3.8.1/dist/css/justifiedGallery.min.css"},"loader":{"start":true,"switch":true},"search":{"type":"local","path":"search.xml","hits":{"per_page":10}},"valine":{"appId":null,"appKey":null,"placeholder":"ヽ(○´∀`)ﾉ♪","avatar":"mp","pageSize":10,"lang":"zh-CN","visitor":true,"NoRecordIP":false,"serverURLs":null,"powerMode":true,"tagMeta":{"visitor":"新朋友","master":"主人","friend":"小伙伴","investor":"金主粑粑"},"tagColor":{"master":"var(--color-orange)","friend":"var(--color-aqua)","investor":"var(--color-pink)"},"tagMember":{"master":null,"friend":null,"investor":null}},"quicklink":{"timeout":3000,"priority":true},"fireworks":["rgba(255,182,185,.9)","rgba(250,227,217,.9)","rgba(187,222,214,.9)","rgba(138,198,209,.9)"]};const getRndInteger = function (min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -2074,6 +2074,184 @@ const algoliaSearch = function(pjax) {
     });
   }
 
+  const openSearch = function() {
+    document.body.style.overflow = 'hidden';
+    transition(siteSearch, 'shrinkIn', function() {
+      var input = $('.search-input');
+      input && input.focus();
+    })
+  }
+
+  const closeSearch = function() {
+    document.body.style.overflow = '';
+    transition(siteSearch, 0);
+  };
+
+  const registerSearchEvents = function() {
+    if(siteSearch.attr('data-ready'))
+      return
+
+    $.each('.search', function(element) {
+      element.addEventListener('click', openSearch);
+    });
+
+    siteSearch.addEventListener('click', function(event) {
+      if (event.target === siteSearch) {
+        closeSearch();
+      }
+    });
+    $('.close-btn').addEventListener('click', closeSearch);
+    window.addEventListener('pjax:success', closeSearch);
+    window.addEventListener('keyup', function(event) {
+      if (event.key === 'Escape') {
+        closeSearch();
+      }
+    });
+
+    siteSearch.attr('data-ready', true)
+  }
+
+  if(CONFIG.search.type === 'local') {
+    var inputContainer = $('.search-input-container');
+    var statsContainer = $('#search-stats');
+    var hitsContainer = $('#search-hits');
+    var paginationContainer = $('#search-pagination');
+    var searchInput = inputContainer.child('.search-input');
+    var localData = null;
+    var localTimer = null;
+
+    if(!searchInput) {
+      inputContainer.innerHTML = '<input class="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="' + LOCAL.search.placeholder + '">';
+      searchInput = inputContainer.child('.search-input');
+    }
+
+    const escapeHTML = function(text) {
+      return String(text || '').replace(/[&<>"']/g, function(match) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[match];
+      });
+    }
+
+    const stripHTML = function(html) {
+      var box = document.createElement('div');
+      box.innerHTML = html || '';
+      return (box.textContent || box.innerText || '').replace(/\s+/g, ' ').trim();
+    }
+
+    const markWords = function(text, words) {
+      var result = escapeHTML(text);
+      words.forEach(function(word) {
+        var pattern = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        result = result.replace(new RegExp('(' + pattern + ')', 'ig'), '<mark>$1</mark>');
+      });
+      return result;
+    }
+
+    const searchURL = function() {
+      var path = CONFIG.search.path || 'search.xml';
+      return path.indexOf('/') === 0 ? path : (CONFIG.root || '/') + path;
+    }
+
+    const fetchLocalData = function(callback) {
+      if(localData) {
+        callback(localData);
+        return;
+      }
+
+      statsContainer.innerHTML = '<hr>';
+      fetch(searchURL()).then(function(response) {
+        return response.text();
+      }).then(function(text) {
+        var xml = new DOMParser().parseFromString(text, 'application/xml');
+        localData = Array.prototype.slice.call(xml.querySelectorAll('entry')).map(function(item) {
+          var title = item.querySelector('title');
+          var url = item.querySelector('url');
+          var content = item.querySelector('content');
+          return {
+            title: title ? title.textContent : '',
+            url: url ? url.textContent : '',
+            content: stripHTML(content ? content.textContent : '')
+          };
+        });
+        callback(localData);
+      }).catch(function() {
+        statsContainer.innerHTML = LOCAL.search.empty.replace(/\$\{query}/, searchInput.value) + '<hr>';
+        hitsContainer.innerHTML = '';
+      });
+    }
+
+    const renderLocalResults = function(data) {
+      var query = searchInput.value.trim();
+      var begin = Date.now();
+      paginationContainer.innerHTML = '';
+
+      if(!query) {
+        statsContainer.innerHTML = '<hr>';
+        hitsContainer.innerHTML = '';
+        return;
+      }
+
+      var words = query.toLowerCase().split(/\s+/).filter(function(word) {
+        return word.length > 0;
+      });
+
+      var results = data.filter(function(item) {
+        var text = (item.title + ' ' + item.content).toLowerCase();
+        return words.every(function(word) {
+          return text.indexOf(word) > -1;
+        });
+      });
+
+      var limit = (CONFIG.search.hits && CONFIG.search.hits.per_page) || 10;
+      var hits = results.slice(0, limit);
+      var cost = Date.now() - begin;
+
+      statsContainer.innerHTML = LOCAL.search.stats
+        .replace(/\$\{hits}/, results.length)
+        .replace(/\$\{time}/, cost) + '<hr>';
+
+      if(!hits.length) {
+        hitsContainer.innerHTML = '<div id="hits-empty">' + LOCAL.search.empty.replace(/\$\{query}/, escapeHTML(query)) + '</div>';
+        return;
+      }
+
+      hitsContainer.innerHTML = '<ol>' + hits.map(function(item) {
+        var content = item.content || '';
+        var lowerContent = content.toLowerCase();
+        var index = lowerContent.indexOf(words[0]);
+        var start = index > 50 ? index - 50 : 0;
+        var snippet = content.substring(start, start + 150);
+        if(start > 0) {
+          snippet = '...' + snippet;
+        }
+        if(start + 150 < content.length) {
+          snippet += '...';
+        }
+        return '<li class="item"><a href="' + item.url + '">' +
+          '<span>' + markWords(item.title, words) + '</span>' +
+          markWords(snippet, words) +
+          '</a></li>';
+      }).join('') + '</ol>';
+
+      pjax.refresh(hitsContainer);
+    }
+
+    searchInput.addEventListener('input', function() {
+      clearTimeout(localTimer);
+      localTimer = setTimeout(function() {
+        fetchLocalData(renderLocalResults);
+      }, 120);
+    });
+
+    registerSearchEvents();
+    return;
+  }
+
   var search = instantsearch({
     indexName: CONFIG.search.indexName,
     searchClient  : algoliasearch(CONFIG.search.appID, CONFIG.search.apiKey),
@@ -2161,33 +2339,7 @@ const algoliaSearch = function(pjax) {
   search.start();
 
   // Handle and trigger popup window
-  $.each('.search', function(element) {
-    element.addEventListener('click', function() {
-      document.body.style.overflow = 'hidden';
-      transition(siteSearch, 'shrinkIn', function() {
-          $('.search-input').focus();
-        }) // transition.shrinkIn
-    });
-  });
-
-  // Monitor main search box
-  const onPopupClose = function() {
-    document.body.style.overflow = '';
-    transition(siteSearch, 0); // "transition.shrinkOut"
-  };
-
-  siteSearch.addEventListener('click', function(event) {
-    if (event.target === siteSearch) {
-      onPopupClose();
-    }
-  });
-  $('.close-btn').addEventListener('click', onPopupClose);
-  window.addEventListener('pjax:success', onPopupClose);
-  window.addEventListener('keyup', function(event) {
-    if (event.key === 'Escape') {
-      onPopupClose();
-    }
-  });
+  registerSearchEvents();
 }
 const domInit = function() {
   $.each('.overview .menu > .item', function(el) {
